@@ -6,6 +6,8 @@ import '../../services/database_service.dart';
 import '../../services/history_service.dart';
 import '../../theme/app_theme.dart';
 import 'balcao_search_screen.dart';
+import 'consulta_chassi_screen.dart';
+import 'diagrama_veiculo_screen.dart';
 import 'favoritos_screen.dart';
 import 'gerenciamento_conversoes_screen.dart';
 import 'historico_screen.dart';
@@ -49,7 +51,11 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
         db: widget.db,
         auth: widget.auth,
         history: widget.history,
+        onAbrirDiagrama: () => setState(() => _currentIndex = 1),
+        onAbrirChassi: () => setState(() => _currentIndex = 2),
       ),
+      DiagramaVeiculoScreen(db: widget.db),
+      ConsultaChassiScreen(db: widget.db),
       FavoritosScreen(db: widget.db),
       HistoricoScreen(
         history: widget.history,
@@ -89,11 +95,13 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
           border: Border(top: BorderSide(color: AppTheme.dividerColor, width: 1)),
         ),
         child: BottomNavigationBar(
-          currentIndex: _currentIndex >= 4 ? 0 : _currentIndex,
+          currentIndex: _currentIndex >= 5 ? 0 : _currentIndex,
           type: BottomNavigationBarType.fixed,
           backgroundColor: AppTheme.surfaceDark,
           selectedItemColor: AppTheme.silvaGold,
           unselectedItemColor: AppTheme.textSecondary,
+          selectedFontSize: 11,
+          unselectedFontSize: 10,
           onTap: (index) {
             setState(() => _currentIndex = index);
           },
@@ -104,6 +112,16 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
               label: 'Busca Balcão',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.layers_outlined),
+              activeIcon: Icon(Icons.layers, color: AppTheme.silvaGold),
+              label: 'Diagrama',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.qr_code_scanner_outlined),
+              activeIcon: Icon(Icons.qr_code_scanner, color: AppTheme.silvaGold),
+              label: 'Chassi VIN',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.star_border),
               activeIcon: Icon(Icons.star, color: AppTheme.silvaGold),
               label: 'Mais Usadas',
@@ -112,11 +130,6 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
               icon: Icon(Icons.history),
               activeIcon: Icon(Icons.history, color: AppTheme.silvaGold),
               label: 'Histórico',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.upload_file),
-              activeIcon: Icon(Icons.upload_file, color: AppTheme.silvaGold),
-              label: 'Importar',
             ),
           ],
         ),
@@ -169,7 +182,7 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
                             ),
                           ),
                           Text(
-                            'Catálogo de Peças',
+                            'Catálogo Inteligente de Peças',
                             style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
                           ),
                         ],
@@ -180,11 +193,11 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
                 const SizedBox(height: 14),
                 if (user != null) ...[
                   Text(
-                    'Usuário: ${user.nome}',
+                    'Operador: ${user.nome}',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   Text(
-                    'Perfil: ${user.nivelAcesso.nomeExibicao}',
+                    'Nível: ${user.nivelAcesso.nomeExibicao}',
                     style: const TextStyle(color: AppTheme.silvaCyan, fontSize: 11),
                   ),
                 ],
@@ -201,8 +214,8 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.star, color: AppTheme.silvaGold),
-            title: const Text('Mais Utilizadas (Favoritos)', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.layers, color: AppTheme.silvaGold),
+            title: const Text('Diagrama Visual Interativo (Hover)', style: TextStyle(color: Colors.white)),
             selected: _currentIndex == 1,
             onTap: () {
               Navigator.pop(context);
@@ -210,8 +223,8 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.history, color: AppTheme.silvaGold),
-            title: const Text('Histórico de Pesquisas', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.qr_code_scanner, color: AppTheme.silvaGold),
+            title: const Text('Consulta por Chassi (VIN 17 Dígitos)', style: TextStyle(color: Colors.white)),
             selected: _currentIndex == 2,
             onTap: () {
               Navigator.pop(context);
@@ -219,12 +232,30 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.upload_file, color: AppTheme.silvaGold),
-            title: const Text('Importar Planilhas (Excel/CSV)', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.star, color: AppTheme.silvaGold),
+            title: const Text('Mais Utilizadas (Favoritos)', style: TextStyle(color: Colors.white)),
             selected: _currentIndex == 3,
             onTap: () {
               Navigator.pop(context);
               setState(() => _currentIndex = 3);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.history, color: AppTheme.silvaGold),
+            title: const Text('Histórico de Pesquisas', style: TextStyle(color: Colors.white)),
+            selected: _currentIndex == 4,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _currentIndex = 4);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload_file, color: AppTheme.silvaGold),
+            title: const Text('Importar Planilhas (Excel/CSV)', style: TextStyle(color: Colors.white)),
+            selected: _currentIndex == 5,
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _currentIndex = 5);
             },
           ),
           const Divider(color: AppTheme.dividerColor),
@@ -241,28 +272,28 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
             ListTile(
               leading: const Icon(Icons.category, color: AppTheme.silvaCyan),
               title: const Text('Gestão de Conversões', style: TextStyle(color: Colors.white)),
-              selected: _currentIndex == 4,
+              selected: _currentIndex == 6,
               onTap: () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 4);
+                setState(() => _currentIndex = 6);
               },
             ),
             ListTile(
               leading: const Icon(Icons.directions_car, color: AppTheme.silvaCyan),
               title: const Text('Gestão de Veículos', style: TextStyle(color: Colors.white)),
-              selected: _currentIndex == 5,
+              selected: _currentIndex == 7,
               onTap: () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 5);
+                setState(() => _currentIndex = 7);
               },
             ),
             ListTile(
               leading: const Icon(Icons.security, color: AppTheme.silvaCyan),
               title: const Text('Usuários & Auditoria', style: TextStyle(color: Colors.white)),
-              selected: _currentIndex == 6,
+              selected: _currentIndex == 8,
               onTap: () {
                 Navigator.pop(context);
-                setState(() => _currentIndex = 6);
+                setState(() => _currentIndex = 8);
               },
             ),
             const Divider(color: AppTheme.dividerColor),
@@ -270,14 +301,14 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
 
           ListTile(
             leading: const Icon(Icons.refresh, color: AppTheme.warningAmber),
-            title: const Text('Restaurar Base Padrão Silva', style: TextStyle(color: Colors.white, fontSize: 13)),
+            title: const Text('Restaurar Base Padrão Silva (8 Montadoras)', style: TextStyle(color: Colors.white, fontSize: 13)),
             onTap: () {
               Navigator.pop(context);
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Restaurar Catálogo Oficial?'),
-                  content: const Text('Isso restaurará a base padrão homologada de veículos e peças do Centro Automotivo Silva.'),
+                  content: const Text('Isso restaurará a base padrão oficial com as 8 principais montadoras (Toyota, VW, GM, Fiat, Hyundai, Jeep, Renault, Honda).'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCELAR')),
                     ElevatedButton(
@@ -285,7 +316,7 @@ class _HomeNavigationScreenState extends State<HomeNavigationScreen> {
                         widget.db.resetarBaseParaPadrao();
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Base do Centro Automotivo Silva restaurada com sucesso!')),
+                          const SnackBar(content: Text('Base Oficial das 8 Montadoras restaurada com sucesso!')),
                         );
                       },
                       child: const Text('RESTAURAR'),

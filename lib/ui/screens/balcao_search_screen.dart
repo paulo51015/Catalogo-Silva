@@ -16,12 +16,16 @@ class BalcaoSearchScreen extends StatefulWidget {
   final DatabaseService db;
   final AuthService auth;
   final HistoryService history;
+  final VoidCallback? onAbrirDiagrama;
+  final VoidCallback? onAbrirChassi;
 
   const BalcaoSearchScreen({
     super.key,
     required this.db,
     required this.auth,
     required this.history,
+    this.onAbrirDiagrama,
+    this.onAbrirChassi,
   });
 
   @override
@@ -41,8 +45,15 @@ class _BalcaoSearchScreenState extends State<BalcaoSearchScreen> {
     'Onix amortecedor',
     'Strada 1.3',
     'HB20 amortecedor',
+    'Renegade',
+    'Kwid',
+    'Civic G10',
     'GP33256',
-    '3392',
+    'PD/1544',
+  ];
+
+  final List<String> _montadorasPrincipais = [
+    'Toyota', 'Volkswagen', 'Chevrolet', 'Fiat', 'Hyundai', 'Jeep', 'Renault', 'Honda',
   ];
 
   @override
@@ -177,7 +188,7 @@ class _BalcaoSearchScreenState extends State<BalcaoSearchScreen> {
                   onChanged: (text) => _executarBusca(text),
                   style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                   decoration: InputDecoration(
-                    hintText: 'Digite código (ex: 3392, GP33256), veículo ou peça...',
+                    hintText: 'Digite código (ex: GP33256, 04465-02400), veículo ou peça...',
                     hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.normal),
                     prefixIcon: const Icon(Icons.search, color: AppTheme.silvaGold, size: 26),
                     suffixIcon: Row(
@@ -208,22 +219,88 @@ class _BalcaoSearchScreenState extends State<BalcaoSearchScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // 3. Atalhos de Sugestões Rápidas
+              // 3. Botões de Acesso Rápido a Diagrama e Chassi VIN
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onAbrirDiagrama,
+                      icon: const Icon(Icons.layers, size: 16, color: AppTheme.silvaGold),
+                      label: const Text('Diagrama Explodido (Hover)', style: TextStyle(color: AppTheme.silvaGold, fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.silvaGold),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onAbrirChassi,
+                      icon: const Icon(Icons.qr_code_scanner, size: 16, color: AppTheme.silvaCyan),
+                      label: const Text('Consultar Chassi VIN', style: TextStyle(color: AppTheme.silvaCyan, fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.silvaCyan),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // 4. Seletor Rápido das 8 Montadoras
               SizedBox(
-                height: 34,
+                height: 32,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _montadorasPrincipais.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, index) {
+                    final mont = _montadorasPrincipais[index];
+                    final isSel = _activeFilters.montadora == mont;
+
+                    return ActionChip(
+                      label: Text(mont, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal, color: isSel ? Colors.black : Colors.white)),
+                      backgroundColor: isSel ? AppTheme.silvaGold : AppTheme.surfaceLight,
+                      side: BorderSide(color: isSel ? AppTheme.silvaGold : AppTheme.dividerColor),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      onPressed: () {
+                        setState(() {
+                          _activeFilters = SearchFilters(
+                            montadora: isSel ? null : mont,
+                            modelo: _activeFilters.modelo,
+                            ano: _activeFilters.ano,
+                            categoria: _activeFilters.categoria,
+                            posicao: _activeFilters.posicao,
+                            fabricanteParalelo: _activeFilters.fabricanteParalelo,
+                            status: _activeFilters.status,
+                          );
+                        });
+                        _executarBusca();
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // 5. Atalhos de Sugestões Rápidas
+              SizedBox(
+                height: 30,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: _sugestoesRapidas.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
                   itemBuilder: (context, index) {
                     final sug = _sugestoesRapidas[index];
                     return ActionChip(
-                      label: Text(sug, style: const TextStyle(fontSize: 11, color: AppTheme.silvaCyan)),
-                      backgroundColor: AppTheme.surfaceLight,
+                      label: Text(sug, style: const TextStyle(fontSize: 10, color: AppTheme.silvaCyan)),
+                      backgroundColor: AppTheme.surfaceDark,
                       side: const BorderSide(color: AppTheme.dividerColor),
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       onPressed: () {
                         _searchController.text = sug;
                         _executarBusca(sug);
@@ -233,9 +310,9 @@ class _BalcaoSearchScreenState extends State<BalcaoSearchScreen> {
                 ),
               ),
 
-              // 4. Badges de Filtros Ativos (se houver)
+              // 6. Badges de Filtros Ativos (se houver)
               if (!_activeFilters.isEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   children: [
@@ -266,9 +343,9 @@ class _BalcaoSearchScreenState extends State<BalcaoSearchScreen> {
                   ],
                 ),
               ],
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // 5. Barra de Estatística de Resultados
+              // 7. Barra de Estatística de Resultados
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -294,7 +371,7 @@ class _BalcaoSearchScreenState extends State<BalcaoSearchScreen> {
               ),
               const Divider(color: AppTheme.dividerColor),
 
-              // 6. Lista de Resultados / Conversões
+              // 8. Lista de Resultados / Conversões
               Expanded(
                 child: _searchResults.isEmpty
                     ? _buildEmptyState()
