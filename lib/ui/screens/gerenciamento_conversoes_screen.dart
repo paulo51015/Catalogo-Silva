@@ -100,7 +100,7 @@ class _GerenciamentoConversoesScreenState extends State<GerenciamentoConversoesS
                               decoration: const InputDecoration(labelText: 'Categoria'),
                               items: CategoriaPeca.values.map((c) {
                                 return DropdownMenuItem(value: c, child: Text('${c.icone} ${c.nomeExibicao}', style: const TextStyle(fontSize: 12)));
-                              }).toList>,
+                              }).toList(),
                               onChanged: (c) => setModalState(() => categoriaSelecionada = c!),
                             ),
                           ),
