@@ -1,0 +1,11 @@
+{
+  "name": "Catálogo Inteligente de Conversão de Peças - Centro Automotivo Silva",
+  "short_name": "Catálogo Silva",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#081220",
+  "theme_color": "#FFB703",
+  "description": "Sistema de consulta, conversão e equivalência de peças automotivas do Centro Automotivo Silva.",
+  "orientation": "any",
+  "prefer_related_applications": false
+}
