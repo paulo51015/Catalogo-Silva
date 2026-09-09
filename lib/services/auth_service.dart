@@ -1,88 +1,116 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/usuario_model.dart';
+import '../models/user_model.dart';
 
-/// Serviço de Autenticação e Controle de Acesso por Níveis (RBAC).
+/// Serviço de Autenticação e Segurança com persistência local via SharedPreferences.
+/// Credenciais padrão iniciais: Usuário 'admin' / Senha '123456'.
 class AuthService extends ChangeNotifier {
-  static final AuthService _instance = AuthService._internal();
-  factory AuthService() => _instance;
-  AuthService._internal();
+  static const String _keyPassword = 'harmonia_auth_password';
+  static const String _keyUserSession = 'harmonia_auth_session';
+  static const String defaultUsername = 'admin';
+  static const String defaultPassword = '123456';
 
-  UsuarioModel? _currentUser;
-  UsuarioModel? get currentUser => _currentUser;
-  bool get isAuthenticated => _currentUser != null;
-  bool get isAdmin => _currentUser?.isAdmin ?? false;
+  UserModel? _currentUser;
+  bool _isAuthenticated = false;
+  bool _isInitialized = false;
 
-  final List<UsuarioModel> _usuariosCadastrados = [
-    const UsuarioModel(
-      id: 'usr_admin',
-      nome: 'Administrador Silva',
-      login: 'admin',
-      senha: '123', // Padrão solicitado
-      nivelAcesso: NivelAcesso.administrador,
-    ),
-    const UsuarioModel(
-      id: 'usr_balcao',
-      nome: 'Colaborador Balcão',
-      login: 'balcao',
-      senha: '123',
-      nivelAcesso: NivelAcesso.colaborador,
-    ),
-    const UsuarioModel(
-      id: 'usr_carlos',
-      nome: 'Carlos Silva (Consultor)',
-      login: 'carlos',
-      senha: '123',
-      nivelAcesso: NivelAcesso.colaborador,
-    ),
-  ];
+  UserModel? get currentUser => _currentUser;
+  bool get isAuthenticated => _isAuthenticated;
+  bool get isInitialized => _isInitialized;
 
-  List<UsuarioModel> get usuarios => List.unmodifiable(_usuariosCadastrados);
+  AuthService() {
+    _init();
+  }
 
-  Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLogin = prefs.getString('silva_logged_user');
-    if (savedLogin != null) {
-      final user = _usuariosCadastrados.firstWhere(
-        (u) => u.login == savedLogin,
-        orElse: () => _usuariosCadastrados.first,
-      );
-      _currentUser = user;
-      notifyListeners();
-    } else {
-      // Entra como administrador por padrão para uso imediato no balcão
-      _currentUser = _usuariosCadastrados.first;
+  Future<void> _init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Se for a primeira inicialização, salva a senha padrão
+      if (!prefs.containsKey(_keyPassword)) {
+        await prefs.setString(_keyPassword, defaultPassword);
+      }
+
+      final sessionData = prefs.getString(_keyUserSession);
+      if (sessionData != null) {
+        final map = jsonDecode(sessionData) as Map<String, dynamic>;
+        _currentUser = UserModel.fromMap(map);
+        _isAuthenticated = true;
+      }
+    } catch (e) {
+      debugPrint('Erro ao inicializar AuthService: $e');
+    } finally {
+      _isInitialized = true;
       notifyListeners();
     }
   }
 
+  /// Realiza login comparando com a senha persistida no dispositivo.
   Future<bool> login(String username, String password) async {
-    final user = _usuariosCadastrados.firstWhere(
-      (u) => u.login.trim().toLowerCase() == username.trim().toLowerCase() && u.senha == password,
-      orElse: () => const UsuarioModel(id: '', nome: '', login: '', senha: ''),
-    );
+    final prefs = await SharedPreferences.getInstance();
+    final savedPassword = prefs.getString(_keyPassword) ?? defaultPassword;
 
-    if (user.id.isNotEmpty) {
-      _currentUser = user;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('silva_logged_user', user.login);
+    // Normaliza username para 'admin'
+    final cleanUsername = username.trim().toLowerCase();
+
+    if (cleanUsername == defaultUsername && password == savedPassword) {
+      _currentUser = UserModel(
+        username: defaultUsername,
+        displayName: 'Produtor Admin',
+        role: 'Master Producer & Instructor',
+        lastLogin: DateTime.now(),
+      );
+      _isAuthenticated = true;
+
+      // Salva sessão
+      await prefs.setString(
+        _keyUserSession,
+        jsonEncode(_currentUser!.toMap()),
+      );
+
       notifyListeners();
       return true;
     }
+
     return false;
   }
 
-  Future<void> logout() async {
-    _currentUser = null;
+  /// Altera a senha e salva de forma persistente no SharedPreferences.
+  Future<({bool success, String? messageKey})> changePassword(
+    String currentPassword,
+    String newPassword,
+    String confirmNewPassword,
+  ) async {
+    if (newPassword != confirmNewPassword) {
+      return (success: false, messageKey: 'password_mismatch');
+    }
+
+    if (newPassword.length < 6) {
+      return (success: false, messageKey: 'password_too_short');
+    }
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('silva_logged_user');
+    final savedPassword = prefs.getString(_keyPassword) ?? defaultPassword;
+
+    if (currentPassword != savedPassword) {
+      return (success: false, messageKey: 'invalid_credentials');
+    }
+
+    // Salva a nova senha
+    await prefs.setString(_keyPassword, newPassword);
     notifyListeners();
+    return (success: true, messageKey: 'password_changed_success');
   }
 
-  Future<void> alternarUsuarioRapido(UsuarioModel user) async {
-    _currentUser = user;
+  /// Encerra a sessão ativa.
+  Future<void> logout() async {
+    _currentUser = null;
+    _isAuthenticated = false;
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('silva_logged_user', user.login);
+    await prefs.remove(_keyUserSession);
+
     notifyListeners();
   }
 }
